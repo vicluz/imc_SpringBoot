@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Aplicação de Peso Ideal</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.5.1/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.0/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <style>
+        body {
+            margin: 20px;
+        }
+        .form-container {
+            margin-top: 20px;
+        }
+        .result-container {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="text-center">Aplicação de Peso Ideal</h1>
+    <div class="form-container">
+        <form id="pessoaForm">
+            <div class="form-group">
+                <label for="nome">Nome:</label>
+                <input type="text" class="form-control" id="nome" required>
+            </div>
+            <div class="form-group">
+                <label for="peso">Peso (kg):</label>
+                <input type="number" step="0.1" class="form-control" id="peso" required>
+            </div>
+            <div class="form-group">
+                <label for="altura">Altura (m):</label>
+                <input type="number" step="0.01" class="form-control" id="altura" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Calcular IMC</button>
+        </form>
+    </div>
+    <div class="result-container">
+        <h2>Resultados</h2>
+        <table class="table table-bordered">
+            <thead>
+            <tr>
+                <th>Nome</th>
+                <th>Peso</th>
+                <th>Altura</th>
+                <th>IMC</th>
+                <th>Classificação IMC</th>
+                <th>Ações</th>
+            </tr>
+            </thead>
+            <tbody id="resultTable">
+            <!-- Resultados vão aparecer aqui -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    $(document).ready(function() {
+        let editingPessoaId = null;
+
+        // Função para buscar e exibir pessoas
+        function fetchPessoas() {
+            $.ajax({
+                url: '/api/pessoas',
+                method: 'GET',
+                success: function(data) {
+                    let resultTable = $('#resultTable');
+                    resultTable.empty();
+                    data.forEach(pessoa => {
+                        resultTable.append(`
+                            <tr>
+                                <td>${pessoa.nome}</td>
+                                <td>${pessoa.peso}</td>
+                                <td>${pessoa.altura}</td>
+                                <td>${pessoa.imc.toFixed(2)}</td>
+                                <td>${pessoa.classificacaoIMC}</td>
+                                <td>
+                                    <button class="btn btn-warning btn-edit" data-id="${pessoa.id}">Editar</button>
+                                    <button class="btn btn-danger btn-delete" data-id="${pessoa.id}">Excluir</button>
+                                </td>
+                            </tr>
+                        `);
+                    });
+                }
+            });
+        }
+
+        // Carregar dados ao carregar a página
+        fetchPessoas();
+
+        // Adicionar nova pessoa ou editar existente
+        $('#pessoaForm').submit(function(event) {
+            event.preventDefault();
+
+            let pessoa = {
+                nome: $('#nome').val(),
+                peso: $('#peso').val(),
+                altura: $('#altura').val()
+            };
+
+            let url = '/api/pessoas';
+            let method = 'POST';
+
+            if (editingPessoaId) {
+                url = `/api/pessoas/${editingPessoaId}`;
+                method = 'PUT';
+            }
+
+            $.ajax({
+                url: url,
+                method: method,
+                contentType: 'application/json',
+                data: JSON.stringify(pessoa),
+                success: function(response) {
+                    fetchPessoas();
+                    $('#pessoaForm')[0].reset();
+                    editingPessoaId = null;
+                }
+            });
+        });
+
+        // Editar pessoa
+        $(document).on('click', '.btn-edit', function() {
+            let pessoaId = $(this).data('id');
+            $.ajax({
+                url: `/api/pessoas/${pessoaId}`,
+                method: 'GET',
+                success: function(pessoa) {
+                    $('#nome').val(pessoa.nome);
+                    $('#peso').val(pessoa.peso);
+                    $('#altura').val(pessoa.altura);
+                    editingPessoaId = pessoa.id;
+                }
+            });
+        });
+
+        // Excluir pessoa
+        $(document).on('click', '.btn-delete', function() {
+            let pessoaId = $(this).data('id');
+            $.ajax({
+                url: `/api/pessoas/${pessoaId}`,
+                method: 'DELETE',
+                success: function() {
+                    fetchPessoas();
+                }
+            });
+        });
+    });
+</script>
+</body>
+</html>
